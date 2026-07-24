@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/glass_text_field.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../providers/app_providers.dart';
 
-class AuthPage extends StatefulWidget {
+class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
 
   @override
-  State<AuthPage> createState() => _AuthPageState();
+  ConsumerState<AuthPage> createState() => _AuthPageState();
 }
 
-class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin {
+class _AuthPageState extends ConsumerState<AuthPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isLoading = false;
 
@@ -27,14 +29,56 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  void _handleAuth() {
+  Future<void> _handleEmailAuth() async {
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 1200), () {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        context.go('/');
+    final auth = ref.read(authServiceProvider);
+    
+    try {
+      if (_tabController.index == 0) {
+        // Sign In
+        await auth.signInWithEmail(_emailController.text.trim(), _passwordController.text.trim());
+      } else {
+        // Create Account
+        await auth.signUpWithEmail(_emailController.text.trim(), _passwordController.text.trim());
       }
-    });
+      if (mounted) {
+        context.go('/onboarding-details');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Authentication failed: $e'), backgroundColor: AppColors.roseError),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleSocialAuth(String provider) async {
+    setState(() => _isLoading = true);
+    final auth = ref.read(authServiceProvider);
+    
+    try {
+      if (provider == 'google') {
+        await auth.signInWithGoogle();
+      } else if (provider == 'apple') {
+        await auth.signInWithApple();
+      } else {
+        await auth.signInAnonymously(); // Guest fallback
+      }
+      if (mounted) {
+        context.go('/onboarding-details');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$provider sign in failed: $e'), backgroundColor: AppColors.roseError),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -68,7 +112,7 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                   const SizedBox(height: 16),
 
                   const Text(
-                    'Welcome to SkillVerse',
+                    'Welcome to SkillVerse AI',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 26,
@@ -145,7 +189,17 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                                   width: double.infinity,
                                   text: isSignUp ? 'Create Free Account' : 'Sign In to SkillVerse',
                                   isLoading: _isLoading,
-                                  onPressed: _handleAuth,
+                                  onPressed: _handleEmailAuth,
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Guest Login
+                                TextButton(
+                                  onPressed: () => _handleSocialAuth('guest'),
+                                  child: const Text(
+                                    'Continue as Guest',
+                                    style: TextStyle(color: AppColors.cyanGlow, fontWeight: FontWeight.bold),
+                                  ),
                                 ),
                               ],
                             );
@@ -177,17 +231,12 @@ class _AuthPageState extends State<AuthPage> with SingleTickerProviderStateMixin
                     children: [
                       _SocialIconButton(
                         icon: Icons.g_mobiledata_rounded,
-                        onTap: _handleAuth,
+                        onTap: () => _handleSocialAuth('google'),
                       ),
                       const SizedBox(width: 16),
                       _SocialIconButton(
                         icon: Icons.apple_rounded,
-                        onTap: _handleAuth,
-                      ),
-                      const SizedBox(width: 16),
-                      _SocialIconButton(
-                        icon: Icons.code_rounded,
-                        onTap: _handleAuth,
+                        onTap: () => _handleSocialAuth('apple'),
                       ),
                     ],
                   ),

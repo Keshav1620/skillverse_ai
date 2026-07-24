@@ -22,20 +22,20 @@ class MainNavigationShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navItems = const [
-      _NavItem(icon: Icons.grid_view_rounded, activeIcon: Icons.grid_view_rounded, label: 'Home', route: '/'),
-      _NavItem(icon: Icons.storefront_outlined, activeIcon: Icons.storefront_rounded, label: 'Market', route: '/marketplace'),
-      _NavItem(icon: Icons.psychology_outlined, activeIcon: Icons.psychology_rounded, label: 'AI Coach', route: '/ai-coach'),
-      _NavItem(icon: Icons.radar_outlined, activeIcon: Icons.radar_rounded, label: 'Twin', route: '/digital-twin'),
-      _NavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile', route: '/profile'),
+      _NavItem(icon: Icons.account_balance_outlined, activeIcon: Icons.account_balance_rounded, label: 'Pantheon', route: '/'),
+      _NavItem(icon: Icons.toll_outlined, activeIcon: Icons.toll_rounded, label: 'Agora', route: '/marketplace'),
+      _NavItem(icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome_rounded, label: 'Athena AI', route: '/ai-coach'),
+      _NavItem(icon: Icons.remove_red_eye_outlined, activeIcon: Icons.remove_red_eye_rounded, label: 'Oracle', route: '/digital-twin'),
+      _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield_rounded, label: 'Hero Profile', route: '/profile'),
     ];
 
     final secondaryItems = const [
-      _NavItem(icon: Icons.sports_esports_rounded, activeIcon: Icons.sports_esports_rounded, label: 'Practice Room', route: '/practice'),
-      _NavItem(icon: Icons.bar_chart_rounded, activeIcon: Icons.bar_chart_rounded, label: 'Analytics Dashboard', route: '/dashboard'),
-      _NavItem(icon: Icons.forum_rounded, activeIcon: Icons.forum_rounded, label: 'Community Feed', route: '/community'),
-      _NavItem(icon: Icons.leaderboard_rounded, activeIcon: Icons.leaderboard_rounded, label: 'Leaderboard', route: '/leaderboard'),
-      _NavItem(icon: Icons.workspace_premium_rounded, activeIcon: Icons.workspace_premium_rounded, label: 'Achievements', route: '/achievements'),
-      _NavItem(icon: Icons.settings_rounded, activeIcon: Icons.settings_rounded, label: 'Settings', route: '/settings'),
+      _NavItem(icon: Icons.bolt_rounded, activeIcon: Icons.bolt_rounded, label: 'Hercules Arena', route: '/practice'),
+      _NavItem(icon: Icons.query_stats_rounded, activeIcon: Icons.query_stats_rounded, label: 'Atlas Analytics', route: '/dashboard'),
+      _NavItem(icon: Icons.groups_3_rounded, activeIcon: Icons.groups_3_rounded, label: 'Agora Forums', route: '/community'),
+      _NavItem(icon: Icons.emoji_events_rounded, activeIcon: Icons.emoji_events_rounded, label: 'Olympus Standings', route: '/leaderboard'),
+      _NavItem(icon: Icons.workspace_premium_rounded, activeIcon: Icons.workspace_premium_rounded, label: 'Laurel Blessings', route: '/achievements'),
+      _NavItem(icon: Icons.handyman_rounded, activeIcon: Icons.handyman_rounded, label: 'Hephaestus Forge', route: '/settings'),
     ];
 
     return Scaffold(

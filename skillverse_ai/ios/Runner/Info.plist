@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>SkillVerse AI requires camera access to overlay the MediaPipe skeleton and analyze your physical posture in real-time.</string>
 </dict>
 </plist>

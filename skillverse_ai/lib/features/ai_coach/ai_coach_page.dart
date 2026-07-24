@@ -72,7 +72,7 @@ class _AiCoachPageState extends ConsumerState<AiCoachPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'SkillVerse AI Mentor',
+                          'Hercules AI Mentor',
                           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                         ),
                         Row(
