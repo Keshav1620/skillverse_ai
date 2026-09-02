@@ -35,147 +35,140 @@ class ARBiomechanicsPainter extends CustomPainter {
     final joints = payload.joints;
     final head = map3D(joints['head'] ?? const Joint3DPoint(x: 0, y: 0.85, z: 0));
     final neck = map3D(joints['neck'] ?? const Joint3DPoint(x: 0, y: 0.70, z: 0));
-    final lShoulder = map3D(joints['leftShoulder'] ?? const Joint3DPoint(x: -0.22, y: 0.65, z: 0));
-    final rShoulder = map3D(joints['rightShoulder'] ?? const Joint3DPoint(x: 0.22, y: 0.65, z: 0));
-    final lElbow = map3D(joints['leftElbow'] ?? const Joint3DPoint(x: -0.38, y: 0.35, z: 0.05));
-    final lWrist = map3D(joints['leftWrist'] ?? const Joint3DPoint(x: -0.45, y: 0.10, z: 0.10));
-    final rElbow = map3D(joints['rightElbow'] ?? const Joint3DPoint(x: 0.38, y: 0.35, z: 0.05));
-    final rWrist = map3D(joints['rightWrist'] ?? const Joint3DPoint(x: 0.45, y: 0.10, z: 0.10));
-    final spine = map3D(joints['spine'] ?? const Joint3DPoint(x: 0, y: 0.30, z: 0));
-    final lHip = map3D(joints['leftHip'] ?? const Joint3DPoint(x: -0.15, y: 0.10, z: 0));
-    final rHip = map3D(joints['rightHip'] ?? const Joint3DPoint(x: 0.15, y: 0.10, z: 0));
-    final lKnee = map3D(joints['leftKnee'] ?? const Joint3DPoint(x: -0.18, y: -0.30, z: -0.05));
-    final rKnee = map3D(joints['rightKnee'] ?? const Joint3DPoint(x: 0.18, y: -0.30, z: -0.05));
-    final lAnkle = map3D(joints['leftAnkle'] ?? const Joint3DPoint(x: -0.20, y: -0.70, z: 0));
-    final rAnkle = map3D(joints['rightAnkle'] ?? const Joint3DPoint(x: 0.20, y: -0.70, z: 0));
+    final lShoulder = map3D(joints['leftShoulder'] ?? const Joint3DPoint(x: -0.25, y: 0.50, z: 0));
+    final rShoulder = map3D(joints['rightShoulder'] ?? const Joint3DPoint(x: 0.25, y: 0.50, z: 0));
+    final lElbow = map3D(joints['leftElbow'] ?? const Joint3DPoint(x: -0.38, y: 0.15, z: 0.05));
+    final lWrist = map3D(joints['leftWrist'] ?? const Joint3DPoint(x: -0.42, y: 0.45, z: 0.10));
+    final rElbow = map3D(joints['rightElbow'] ?? const Joint3DPoint(x: 0.38, y: 0.15, z: 0.05));
+    final rWrist = map3D(joints['rightWrist'] ?? const Joint3DPoint(x: 0.42, y: 0.45, z: 0.10));
+    final spine = map3D(joints['spine'] ?? const Joint3DPoint(x: 0, y: 0.20, z: 0));
+    final lHip = map3D(joints['leftHip'] ?? const Joint3DPoint(x: -0.15, y: -0.10, z: 0));
+    final rHip = map3D(joints['rightHip'] ?? const Joint3DPoint(x: 0.15, y: -0.10, z: 0));
+    final lKnee = map3D(joints['leftKnee'] ?? const Joint3DPoint(x: -0.18, y: -0.45, z: -0.05));
+    final rKnee = map3D(joints['rightKnee'] ?? const Joint3DPoint(x: 0.18, y: -0.45, z: -0.05));
+    final lAnkle = map3D(joints['leftAnkle'] ?? const Joint3DPoint(x: -0.20, y: -0.80, z: 0));
+    final rAnkle = map3D(joints['rightAnkle'] ?? const Joint3DPoint(x: 0.20, y: -0.80, z: 0));
 
-    final themeColor = _getOverallSeverityColor(evaluation);
-
-    // 1. Classify Dynamic Human Action (Sitting, Standing, Walking, Running, Jumping, Squatting)
-    final lKneeAngle = BiomechanicsEngine.calculate3DAngle(
-      joints['leftHip'] ?? const Joint3DPoint(x: -0.15, y: 0.10, z: 0),
-      joints['leftKnee'] ?? const Joint3DPoint(x: -0.18, y: -0.30, z: -0.05),
-      joints['leftAnkle'] ?? const Joint3DPoint(x: -0.20, y: -0.70, z: 0),
-    );
-
-    String actionLabel = 'STANDING POSTURE';
-    if (lKneeAngle < 98.0) {
-      actionLabel = 'SITTING / DESK POSTURE';
-    } else if (lKneeAngle < 115.0) {
-      actionLabel = 'SQUAT / CROUCH LOAD';
-    } else if (lKneeAngle < 145.0) {
-      actionLabel = 'WALKING / RUNNING CADENCE';
-    }
-
-    // 2. Draw Dynamic Laser Sweep Line
-    final scanY = (head.dy - 30) + (pulseProgress * (rAnkle.dy - head.dy + 60));
-    final laserPaint = Paint()
-      ..color = AppColors.cyanGlow
-      ..strokeWidth = 2.5;
-    final laserGlowPaint = Paint()
-      ..color = AppColors.cyanGlow.withValues(alpha: 0.15)
-      ..strokeWidth = 12.0;
-
-    canvas.drawLine(Offset(size.width * 0.1, scanY), Offset(size.width * 0.9, scanY), laserGlowPaint);
-    canvas.drawLine(Offset(size.width * 0.1, scanY), Offset(size.width * 0.9, scanY), laserPaint);
-
-    // 3. Volumetric Chest Cage Wireframe Box
-    final chestPath = Path()
-      ..moveTo(lShoulder.dx, lShoulder.dy)
-      ..lineTo(rShoulder.dx, rShoulder.dy)
-      ..lineTo(rHip.dx, rHip.dy)
-      ..lineTo(lHip.dx, lHip.dy)
-      ..close();
-
-    final chestGridPaint = Paint()
-      ..color = AppColors.cyanGlow.withValues(alpha: 0.08)
-      ..style = PaintingStyle.fill;
-    final chestBorderPaint = Paint()
-      ..color = AppColors.cyanGlow.withValues(alpha: 0.35)
+    // 1. Cyan Bone Paint (Matching user image: vibrant Cyan #00E5FF, 6px width)
+    final cyanBonePaint = Paint()
+      ..color = const Color(0xFF00E5FF)
+      ..strokeWidth = 6.0
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
+      ..strokeCap = StrokeCap.round;
 
-    canvas.drawPath(chestPath, chestGridPaint);
-    canvas.drawPath(chestPath, chestBorderPaint);
-    canvas.drawLine(lShoulder, rHip, chestBorderPaint);
-    canvas.drawLine(rShoulder, lHip, chestBorderPaint);
+    final redNodePaint = Paint()
+      ..color = const Color(0xFFFF2A2A)
+      ..style = PaintingStyle.fill;
 
-    // 4. Ghost Target Overlay
-    if (isGhostModeEnabled) {
-      final ghostPaint = Paint()
-        ..color = AppColors.cyanGlow.withValues(alpha: 0.35)
+    // 2. Draw Body Skeleton Bones
+    canvas.drawLine(head, neck, cyanBonePaint);
+    canvas.drawLine(neck, spine, cyanBonePaint);
+    canvas.drawLine(neck, lShoulder, cyanBonePaint);
+    canvas.drawLine(neck, rShoulder, cyanBonePaint);
+
+    canvas.drawLine(lShoulder, lElbow, cyanBonePaint);
+    canvas.drawLine(lElbow, lWrist, cyanBonePaint);
+    canvas.drawLine(rShoulder, rElbow, cyanBonePaint);
+    canvas.drawLine(rElbow, rWrist, cyanBonePaint);
+
+    canvas.drawLine(spine, lHip, cyanBonePaint);
+    canvas.drawLine(spine, rHip, cyanBonePaint);
+    canvas.drawLine(lHip, rHip, cyanBonePaint);
+
+    canvas.drawLine(lHip, lKnee, cyanBonePaint);
+    canvas.drawLine(lKnee, lAnkle, cyanBonePaint);
+    canvas.drawLine(rHip, rKnee, cyanBonePaint);
+    canvas.drawLine(rKnee, rAnkle, cyanBonePaint);
+
+    // 3. Draw 21-Node Hand Finger Skeleton (Left Hand & Right Hand)
+    void drawHandMesh(Offset wrist, String prefix) {
+      final tMcp = map3D(joints['${prefix}_thumb_mcp'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final tTip = map3D(joints['${prefix}_thumb_tip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final iMcp = map3D(joints['${prefix}_index_mcp'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final iPip = map3D(joints['${prefix}_index_pip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final iTip = map3D(joints['${prefix}_index_tip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final mMcp = map3D(joints['${prefix}_middle_mcp'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final mPip = map3D(joints['${prefix}_middle_pip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final mTip = map3D(joints['${prefix}_middle_tip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final rMcp = map3D(joints['${prefix}_ring_mcp'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final rPip = map3D(joints['${prefix}_ring_pip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final rTip = map3D(joints['${prefix}_ring_tip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final pMcp = map3D(joints['${prefix}_pinky_mcp'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+      final pTip = map3D(joints['${prefix}_pinky_tip'] ?? const Joint3DPoint(x: 0, y: 0, z: 0));
+
+      final fingerBonePaint = Paint()
+        ..color = const Color(0xFF00E5FF)
         ..strokeWidth = 3.5
         ..style = PaintingStyle.stroke;
 
-      final gElbowL = Offset(lShoulder.dx - 55, lShoulder.dy + 55);
-      final gWristL = Offset(gElbowL.dx - 50, gElbowL.dy + 30);
-      final gKneeL = Offset(lHip.dx - 20, lHip.dy + 80);
-      final gAnkleL = Offset(gKneeL.dx - 15, gKneeL.dy + 75);
+      // Finger rays
+      canvas.drawLine(wrist, tMcp, fingerBonePaint);
+      canvas.drawLine(tMcp, tTip, fingerBonePaint);
 
-      canvas.drawLine(head, neck, ghostPaint);
-      canvas.drawLine(neck, spine, ghostPaint);
-      canvas.drawLine(lShoulder, gElbowL, ghostPaint);
-      canvas.drawLine(gElbowL, gWristL, ghostPaint);
-      canvas.drawLine(lHip, gKneeL, ghostPaint);
-      canvas.drawLine(gKneeL, gAnkleL, ghostPaint);
+      canvas.drawLine(wrist, iMcp, fingerBonePaint);
+      canvas.drawLine(iMcp, iPip, fingerBonePaint);
+      canvas.drawLine(iPip, iTip, fingerBonePaint);
+
+      canvas.drawLine(wrist, mMcp, fingerBonePaint);
+      canvas.drawLine(mMcp, mPip, fingerBonePaint);
+      canvas.drawLine(mPip, mTip, fingerBonePaint);
+
+      canvas.drawLine(wrist, rMcp, fingerBonePaint);
+      canvas.drawLine(rMcp, rPip, fingerBonePaint);
+      canvas.drawLine(rPip, rTip, fingerBonePaint);
+
+      canvas.drawLine(wrist, pMcp, fingerBonePaint);
+      canvas.drawLine(pMcp, pTip, fingerBonePaint);
+
+      // Red finger joint spheres
+      final fingerNodes = [tMcp, tTip, iMcp, iPip, iTip, mMcp, mPip, mTip, rMcp, rPip, rTip, pMcp, pTip];
+      for (final fn in fingerNodes) {
+        canvas.drawCircle(fn, 7, redNodePaint);
+        canvas.drawCircle(fn, 8.5, Paint()..color = Colors.redAccent.withValues(alpha: 0.4)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      }
     }
 
-    // 5. Draw Dual-Layered Volumetric Glowing Bone Tubes
-    void drawVolumetricBone(Offset from, Offset to) {
-      // Outer Neon Glow Halo
-      final outerGlow = Paint()
-        ..color = themeColor.withValues(alpha: 0.25)
-        ..strokeWidth = 12.0
-        ..strokeCap = StrokeCap.round;
+    drawHandMesh(lWrist, 'l');
+    drawHandMesh(rWrist, 'r');
 
-      // Inner Core Bone Tube
-      final innerCore = Paint()
-        ..color = themeColor
-        ..strokeWidth = 4.5
-        ..strokeCap = StrokeCap.round;
+    // 4. Draw Face Mesh & Eye Sync Keypoints
+    final eyeL = map3D(joints['face_eye_l'] ?? const Joint3DPoint(x: -0.06, y: 0.88, z: 0.05));
+    final eyeR = map3D(joints['face_eye_r'] ?? const Joint3DPoint(x: 0.06, y: 0.88, z: 0.05));
+    final nose = map3D(joints['face_nose'] ?? const Joint3DPoint(x: 0, y: 0.84, z: 0.08));
+    final mouth = map3D(joints['face_mouth'] ?? const Joint3DPoint(x: 0, y: 0.78, z: 0.05));
 
-      canvas.drawLine(from, to, outerGlow);
-      canvas.drawLine(from, to, innerCore);
+    // Face Mask Circle (Matching grey head mask from reference photo)
+    canvas.drawCircle(head, 36, Paint()..color = const Color(0xFFD6D6E0).withValues(alpha: 0.85)..style = PaintingStyle.fill);
+
+    // Eye Sync Diamonds (Blue & Pink)
+    final blueEyePaint = Paint()..color = const Color(0xFF0038FF)..style = PaintingStyle.fill;
+    final pinkEyePaint = Paint()..color = const Color(0xFFFF00C7)..style = PaintingStyle.fill;
+
+    canvas.drawCircle(eyeL, 7, blueEyePaint);
+    canvas.drawCircle(eyeR, 7, pinkEyePaint);
+    canvas.drawCircle(nose, 6, blueEyePaint);
+    canvas.drawCircle(mouth, 7, redNodePaint);
+
+    // Eye Contour Nodes (Red facial dots around eyes like in the photo)
+    final faceDots = [
+      Offset(eyeL.dx - 12, eyeL.dy - 8), Offset(eyeL.dx, eyeL.dy - 12), Offset(eyeL.dx + 12, eyeL.dy - 8),
+      Offset(eyeL.dx - 14, eyeL.dy + 4), Offset(eyeL.dx + 14, eyeL.dy + 4),
+      Offset(eyeR.dx - 12, eyeR.dy - 8), Offset(eyeR.dx, eyeR.dy - 12), Offset(eyeR.dx + 12, eyeR.dy - 8),
+      Offset(eyeR.dx - 14, eyeR.dy + 4), Offset(eyeR.dx + 14, eyeR.dy + 4),
+      Offset(mouth.dx - 10, mouth.dy + 6), Offset(mouth.dx + 10, mouth.dy + 6),
+    ];
+    for (final fd in faceDots) {
+      canvas.drawCircle(fd, 4, redNodePaint);
     }
 
-    drawVolumetricBone(head, neck);
-    drawVolumetricBone(neck, spine);
-    drawVolumetricBone(neck, lShoulder);
-    drawVolumetricBone(neck, rShoulder);
-
-    drawVolumetricBone(lShoulder, lElbow);
-    drawVolumetricBone(lElbow, lWrist);
-    drawVolumetricBone(rShoulder, rElbow);
-    drawVolumetricBone(rElbow, rWrist);
-
-    drawVolumetricBone(spine, lHip);
-    drawVolumetricBone(spine, rHip);
-    drawVolumetricBone(lHip, rHip);
-
-    drawVolumetricBone(lHip, lKnee);
-    drawVolumetricBone(lKnee, lAnkle);
-    drawVolumetricBone(rHip, rKnee);
-    drawVolumetricBone(rKnee, rAnkle);
-
-    // 6. Holographic Head Synapse Scanner
-    canvas.drawCircle(head, 24 + (pulseProgress * 6), Paint()..color = AppColors.cyanGlow.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 1.5);
-    canvas.drawCircle(head, 14, Paint()..color = AppColors.cyanGlow.withValues(alpha: 0.3)..style = PaintingStyle.fill);
-
-    // 7. Volumetric Spherical Joint Nodes
-    final allJoints = [head, neck, lShoulder, rShoulder, lElbow, lWrist, rElbow, rWrist, spine, lHip, rHip, lKnee, lAnkle, rKnee, rAnkle];
-    for (final j in allJoints) {
-      final sphereGlow = Paint()
-        ..color = themeColor.withValues(alpha: 0.35)
-        ..style = PaintingStyle.fill;
-      final sphereCore = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(j, 10 + (pulseProgress * 4), sphereGlow);
-      canvas.drawCircle(j, 5, sphereCore);
+    // 5. Draw Major Red Spherical Joint Nodes
+    final bodyJoints = [head, neck, lShoulder, rShoulder, lElbow, lWrist, rElbow, rWrist, spine, lHip, rHip, lKnee, lAnkle, rKnee, rAnkle];
+    for (final j in bodyJoints) {
+      canvas.drawCircle(j, 12, redNodePaint);
+      canvas.drawCircle(j, 15, Paint()..color = Colors.red.withValues(alpha: 0.35)..style = PaintingStyle.stroke..strokeWidth = 2);
     }
 
-    // 8. Render AR 3D Directional Correction Prompts directly attached to joints
+    // 6. AR 3D Directional Correction Prompts directly attached to joints
     final tp = TextPainter(textDirection: TextDirection.ltr);
 
     void drawARCorrectionTag(String text, BiomechanicalErrorSeverity severity, Offset jointPos, Offset offset) {
@@ -244,40 +237,6 @@ class ARBiomechanicsPainter extends CustomPainter {
         const Offset(24, 15),
       );
     }
-
-    // Dynamic Action Badge over head
-    tp.text = TextSpan(
-      text: ' ⚡ DYNAMIC ACTION: $actionLabel ',
-      style: TextStyle(
-        color: Colors.white,
-        fontWeight: FontWeight.bold,
-        fontSize: 10,
-        background: Paint()..color = AppColors.primaryBlue..style = PaintingStyle.fill,
-      ),
-    );
-    tp.layout();
-    tp.paint(canvas, Offset(head.dx - (tp.width / 2), head.dy - 40));
-
-    // Heatmap in Replay mode
-    if (isReplayModeEnabled) {
-      final heatPaint = Paint()
-        ..shader = RadialGradient(
-          colors: [
-            Colors.red.withValues(alpha: 0.6),
-            Colors.orange.withValues(alpha: 0.3),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromCircle(center: lElbow, radius: 45))
-        ..style = PaintingStyle.fill;
-
-      canvas.drawCircle(lElbow, 45, heatPaint);
-    }
-  }
-
-  Color _getOverallSeverityColor(BiomechanicsEvaluationFrame eval) {
-    if (eval.overallTechniqueScore >= 85) return AppColors.emeraldGreen;
-    if (eval.overallTechniqueScore >= 70) return AppColors.primaryBlue;
-    return AppColors.roseError;
   }
 
   @override
