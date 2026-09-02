@@ -116,6 +116,49 @@ class HomePage extends ConsumerWidget {
 
               const SizedBox(height: 20),
 
+              // Hero Live Camera Feed Action Card
+              GlassContainer(
+                onTap: () => context.push('/practice'),
+                padding: const EdgeInsets.all(16),
+                backgroundColor: AppColors.primaryBlue.withValues(alpha: 0.20),
+                borderColor: AppColors.cyanGlow.withValues(alpha: 0.5),
+                hasGlow: true,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.cyanGlow.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.videocam_rounded, color: Colors.white, size: 30),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('LIVE CAMERA SCANNER', style: TextStyle(color: AppColors.cyanGlow, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                          SizedBox(height: 4),
+                          Text('Launch Camera Telemetry', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 2),
+                          Text('Real-time MediaPipe AI pose & gesture analysis', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.cyanGlow, size: 16),
+                  ],
+                ),
+              ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.2, end: 0),
+
+              const SizedBox(height: 16),
+
               // Level & XP Progress Card
               GlassContainer(
                 hasGlow: true,
@@ -125,16 +168,23 @@ class HomePage extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const SkillBadge(label: 'LVL 42', color: AppColors.cyanGlow),
-                            const SizedBox(width: 10),
-                            Text(
-                              '${user.xp} / ${user.nextLevelXp} XP',
-                              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                          ],
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SkillBadge(label: 'LVL 42', color: AppColors.cyanGlow),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  '${user.xp} / ${user.nextLevelXp} XP',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 6),
                         const Text(
                           'Top 0.6% Global',
                           style: TextStyle(color: AppColors.emeraldGreen, fontWeight: FontWeight.bold, fontSize: 12),

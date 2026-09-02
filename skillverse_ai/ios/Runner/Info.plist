@@ -68,5 +68,7 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>SkillVerse AI requires camera access to overlay the MediaPipe skeleton and analyze your physical posture in real-time.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SkillVerse AI requires microphone access for audio and live telemetry feedback.</string>
 </dict>
 </plist>

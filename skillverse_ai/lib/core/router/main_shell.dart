@@ -11,11 +11,50 @@ class MainNavigationShell extends StatelessWidget {
     required this.navigationShell,
   });
 
+  int _getBottomNavIndex(int branchIndex) {
+    switch (branchIndex) {
+      case 0:
+        return 0;
+      case 1:
+        return 1;
+      case 2:
+        return 2;
+      case 3:
+        return 3; // /practice is branch 3, maps to bottom tab 3 (Live Camera)
+      case 4:
+        return 4; // /digital-twin is branch 4, maps to bottom tab 4 (Oracle)
+      case 8:
+        return 5; // /profile is branch 8, maps to bottom tab 5 (Hero Profile)
+      default:
+        return -1;
+    }
+  }
+
+  int _getBranchIndex(int bottomNavIndex) {
+    switch (bottomNavIndex) {
+      case 0:
+        return 0;
+      case 1:
+        return 1;
+      case 2:
+        return 2;
+      case 3:
+        return 3; // bottom tab 3 (Live Camera) maps to branch 3 (/practice)
+      case 4:
+        return 4; // bottom tab 4 (Oracle) maps to branch 4 (/digital-twin)
+      case 5:
+        return 8; // bottom tab 5 (Hero Profile) maps to branch 8 (/profile)
+      default:
+        return 0;
+    }
+  }
+
   void _onTapTab(int index) {
     HapticFeedback.selectionClick();
+    final targetBranch = _getBranchIndex(index);
     navigationShell.goBranch(
-      index,
-      initialLocation: index == navigationShell.currentIndex,
+      targetBranch,
+      initialLocation: targetBranch == navigationShell.currentIndex,
     );
   }
 
@@ -25,8 +64,9 @@ class MainNavigationShell extends StatelessWidget {
       _NavItem(icon: Icons.account_balance_outlined, activeIcon: Icons.account_balance_rounded, label: 'Pantheon', route: '/'),
       _NavItem(icon: Icons.toll_outlined, activeIcon: Icons.toll_rounded, label: 'Agora', route: '/marketplace'),
       _NavItem(icon: Icons.auto_awesome_outlined, activeIcon: Icons.auto_awesome_rounded, label: 'Athena AI', route: '/ai-coach'),
+      _NavItem(icon: Icons.videocam_outlined, activeIcon: Icons.videocam_rounded, label: 'Live Camera', route: '/practice'),
       _NavItem(icon: Icons.remove_red_eye_outlined, activeIcon: Icons.remove_red_eye_rounded, label: 'Oracle', route: '/digital-twin'),
-      _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield_rounded, label: 'Hero Profile', route: '/profile'),
+      _NavItem(icon: Icons.shield_outlined, activeIcon: Icons.shield_rounded, label: 'Profile', route: '/profile'),
     ];
 
     final secondaryItems = const [
@@ -99,6 +139,17 @@ class MainNavigationShell extends StatelessWidget {
         ),
       ),
       body: navigationShell,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          context.push('/practice');
+        },
+        backgroundColor: AppColors.cyanGlow,
+        foregroundColor: Colors.black,
+        elevation: 8,
+        icon: const Icon(Icons.videocam_rounded, size: 22),
+        label: const Text('Live Camera', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.surface.withValues(alpha: 0.90),
@@ -113,7 +164,7 @@ class MainNavigationShell extends StatelessWidget {
                 navItems.length,
                 (index) {
                   final item = navItems[index];
-                  final isSelected = navigationShell.currentIndex == index;
+                  final isSelected = _getBottomNavIndex(navigationShell.currentIndex) == index;
                   return InkWell(
                     onTap: () => _onTapTab(index),
                     splashColor: AppColors.cyanGlow.withValues(alpha: 0.15),

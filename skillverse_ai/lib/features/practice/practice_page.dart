@@ -6,6 +6,11 @@ import 'package:camera/camera.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/gradient_button.dart';
+import 'models/skill_biomechanics.dart';
+import 'services/biomechanics_engine.dart';
+import 'widgets/human_detection_overlay.dart';
+import 'widgets/ar_biomechanics_painter.dart';
+import 'widgets/biomechanical_hud_panel.dart';
 
 class PracticePage extends StatefulWidget {
   const PracticePage({super.key});
@@ -19,6 +24,12 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
   List<CameraDescription> _cameras = [];
   bool _isCameraInitialized = false;
   int _selectedCameraIndex = 0;
+  String? _cameraError;
+  
+  // Learner Detection & Biomechanical Tutor Lock State
+  bool _isLearnerInFrame = true; // Set to true when human learner steps in frame
+  bool _isCalibrating = false;   // Biomechanical scan lock sweep state
+  Timer? _calibrationTimer;
   
   // Telemetry Session State
   bool _isPaused = false;
@@ -31,12 +42,12 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
   // Mode toggles
   bool _isGhostModeEnabled = false;
   bool _isReplayModeEnabled = false;
-  
-  // Real-time Pose State Simulation variables
-  double _elbowAngle = 120.0;
-  double _backAngle = 165.0;
-  String _currentFeedback = 'Raise your elbow.';
-  Color _skeletonStateColor = AppColors.primaryPurple; 
+  // Native Platform Channel Bridge
+  static const _visionChannel = MethodChannel('com.skillverse.ai/vision_tracking');
+  HumanTrackingPayload _currentTrackingPayload = HumanTrackingPayload.empty();
+  late SkillBiomechanicsProfile _currentBiomechanicsProfile;
+  int _currentPhaseIndex = 0;
+  Timer? _visionPollTimer; 
   
   late AnimationController _pulseController;
   
@@ -48,14 +59,16 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
     
+    _currentBiomechanicsProfile = SkillBiomechanicsProfile.getProfileForSkill('sk_1', 'Zeus Bolt: Basketball Jump Shot');
     _initializeCamera();
     _startSession();
-    _simulateRealtimePoseTelemetry();
+    _initNativeVisionChannel();
   }
 
   @override
   void dispose() {
     _sessionTimer?.cancel();
+    _visionPollTimer?.cancel();
     _cameraController?.dispose();
     _pulseController.dispose();
     super.dispose();
@@ -63,6 +76,7 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
 
   Future<void> _initializeCamera() async {
     try {
+      if (mounted) setState(() => _cameraError = null);
       _cameras = await availableCameras();
       if (_cameras.isNotEmpty) {
         _cameraController = CameraController(
@@ -72,11 +86,31 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
         );
         await _cameraController!.initialize();
         if (mounted) {
-          setState(() => _isCameraInitialized = true);
+          setState(() {
+            _isCameraInitialized = true;
+            _cameraError = null;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isCameraInitialized = false;
+            _cameraError = 'No camera device found on this phone.';
+          });
         }
       }
     } catch (e) {
       debugPrint('Camera initialization error: $e');
+      if (mounted) {
+        final errStr = e.toString().toLowerCase();
+        final isPermission = errStr.contains('permission') || errStr.contains('denied') || errStr.contains('authoriz');
+        setState(() {
+          _isCameraInitialized = false;
+          _cameraError = isPermission
+              ? 'Camera permission denied.\nPlease enable Camera in Settings > SkillVerse AI.'
+              : 'Camera error: $e';
+        });
+      }
     }
   }
 
@@ -130,26 +164,88 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
     });
   }
 
-  void _simulateRealtimePoseTelemetry() {
-    Timer.periodic(const Duration(milliseconds: 1500), (timer) {
-      if (!mounted || _isPaused || _isReplayModeEnabled) return;
-      
-      setState(() {
-        final ran = math.Random();
-        _elbowAngle = 110 + ran.nextDouble() * 60;
-        _backAngle = 150 + ran.nextDouble() * 30;
+  Future<void> _initNativeVisionChannel() async {
+    try {
+      await _visionChannel.invokeMethod('startBodyTracking');
+    } catch (_) {}
 
-        if (_elbowAngle > 140 && _backAngle > 170) {
-          _skeletonStateColor = AppColors.emeraldGreen; 
-          _currentFeedback = 'Excellent stance alignment. Keep going.';
-        } else if (_elbowAngle > 120) {
-          _skeletonStateColor = AppColors.primaryBlue; 
-          _currentFeedback = 'Straighten your lower back.';
-        } else {
-          _skeletonStateColor = AppColors.primaryPurple; 
-          _currentFeedback = 'Raise your dominant elbow.';
+    _visionPollTimer?.cancel();
+    _visionPollTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+      if (!mounted || _isPaused || _isReplayModeEnabled) return;
+
+      try {
+        final res = await _visionChannel.invokeMethod('getJointData');
+        if (res != null && mounted) {
+          final payload = HumanTrackingPayload.fromJson(Map<String, dynamic>.from(res as Map));
+          setState(() {
+            _currentTrackingPayload = payload;
+          });
         }
-      });
+      } catch (e) {
+        // Fallback simulation when platform channel native code is not active
+        if (mounted) {
+          _simulateFallbackPayload();
+        }
+      }
+    });
+  }
+
+  void _simulateFallbackPayload() {
+    final ran = math.Random();
+
+    final state = _isLearnerInFrame
+        ? (_isCalibrating ? HumanDetectionState.humanLocked : HumanDetectionState.humanLocked)
+        : HumanDetectionState.searchingForHuman;
+
+    final Map<String, Joint3DPoint> joints = _isLearnerInFrame
+        ? {
+            'head': const Joint3DPoint(x: 0, y: 0.85, z: 0),
+            'neck': const Joint3DPoint(x: 0, y: 0.70, z: 0),
+            'leftShoulder': const Joint3DPoint(x: -0.22, y: 0.65, z: 0),
+            'rightShoulder': const Joint3DPoint(x: 0.22, y: 0.65, z: 0),
+            'leftElbow': Joint3DPoint(x: -0.38, y: 0.35 + (ran.nextDouble() * 0.05), z: 0.05),
+            'leftWrist': Joint3DPoint(x: -0.45 + (ran.nextDouble() * 0.05), y: 0.10, z: 0.10),
+            'rightElbow': const Joint3DPoint(x: 0.38, y: 0.35, z: 0.05),
+            'rightWrist': const Joint3DPoint(x: 0.45, y: 0.10, z: 0.10),
+            'spine': const Joint3DPoint(x: 0, y: 0.30, z: 0),
+            'leftHip': const Joint3DPoint(x: -0.15, y: 0.10, z: 0),
+            'rightHip': const Joint3DPoint(x: 0.15, y: 0.10, z: 0),
+            'leftKnee': const Joint3DPoint(x: -0.18, y: -0.30, z: -0.05),
+            'rightKnee': const Joint3DPoint(x: 0.18, y: -0.30, z: -0.05),
+            'leftAnkle': const Joint3DPoint(x: -0.20, y: -0.70, z: 0),
+            'rightAnkle': const Joint3DPoint(x: 0.20, y: -0.70, z: 0),
+          }
+        : {};
+
+    setState(() {
+      _currentTrackingPayload = HumanTrackingPayload(
+        humanDetected: _isLearnerInFrame,
+        trackingState: state,
+        trackingConfidence: _isLearnerInFrame ? 0.94 : 0.0,
+        multiplePeopleCount: 1,
+        selectedPersonId: 'primary_user_1',
+        joints: joints,
+      );
+    });
+  }
+
+  void _toggleLearnerPresence() {
+    HapticFeedback.heavyImpact();
+    setState(() {
+      _isLearnerInFrame = !_isLearnerInFrame;
+      if (_isLearnerInFrame) {
+        _isCalibrating = true;
+        _calibrationTimer?.cancel();
+        _calibrationTimer = Timer(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _isCalibrating = false;
+            });
+          }
+        });
+      } else {
+        _isCalibrating = false;
+      }
     });
   }
 
@@ -231,6 +327,12 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    final currentPhase = _currentBiomechanicsProfile.phases[_currentPhaseIndex];
+    final evalFrame = BiomechanicsEngine.evaluateFrame(
+      payload: _currentTrackingPayload,
+      phaseTarget: currentPhase,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -254,12 +356,33 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.video_camera_back_rounded, color: AppColors.primaryBlue.withValues(alpha: 0.2), size: 64),
-                            const SizedBox(height: 12),
-                            Text(
-                              _isReplayModeEnabled ? 'Replay Analytics Mode' : 'Simulating Pose Telemetry Feed',
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                            Icon(
+                              _cameraError != null ? Icons.videocam_off_rounded : Icons.video_camera_back_rounded,
+                              color: _cameraError != null ? AppColors.roseError : AppColors.primaryBlue.withValues(alpha: 0.2),
+                              size: 64,
                             ),
+                            const SizedBox(height: 12),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Text(
+                                _cameraError ?? (_isReplayModeEnabled ? 'Replay Analytics Mode' : 'Simulating Pose Telemetry Feed'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: _cameraError != null ? AppColors.roseError : AppColors.textMuted, fontSize: 13, height: 1.4),
+                              ),
+                            ),
+                            if (_cameraError != null) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primaryBlue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                onPressed: _initializeCamera,
+                                icon: const Icon(Icons.refresh_rounded, size: 18),
+                                label: const Text('Retry Camera Access'),
+                              ),
+                            ],
                           ],
                         ),
                       ],
@@ -267,17 +390,29 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
                   ),
           ),
 
-          // 2. Custom Pose Overlay (MediaPipe joints + Biomechanical Scanning tags)
+          // 2. Custom AR Biomechanics Painter Overlay
           Positioned.fill(
             child: CustomPaint(
-              painter: PosePainter(
-                elbowAngle: _elbowAngle,
-                backAngle: _backAngle,
-                skeletonColor: _skeletonStateColor,
-                isGhostMode: _isGhostModeEnabled,
-                isReplayMode: _isReplayModeEnabled,
+              painter: ARBiomechanicsPainter(
+                payload: _currentTrackingPayload,
+                evaluation: evalFrame,
+                currentPhase: currentPhase,
+                isGhostModeEnabled: _isGhostModeEnabled,
+                isReplayModeEnabled: _isReplayModeEnabled,
                 pulseProgress: _pulseController.value,
               ),
+            ),
+          ),
+
+          // 2B. 4-State Human Detection & Multi-Person Selector Overlay
+          Positioned.fill(
+            child: HumanDetectionOverlay(
+              payload: _currentTrackingPayload,
+              onSelectPerson: (id) async {
+                try {
+                  await _visionChannel.invokeMethod('selectPrimaryPerson', {'personId': id});
+                } catch (_) {}
+              },
             ),
           ),
 
@@ -295,8 +430,105 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
                       onPressed: () => Navigator.pop(context),
                       icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
                     ),
-                    const Text('Hercules Arena', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     
+                    // Skill Profile Selector Menu
+                    PopupMenuButton<SkillBiomechanicsProfile>(
+                      initialValue: _currentBiomechanicsProfile,
+                      tooltip: 'Select Skill Profile',
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      color: AppColors.surface,
+                      onSelected: (profile) {
+                        HapticFeedback.selectionClick();
+                        setState(() {
+                          _currentBiomechanicsProfile = profile;
+                          _currentPhaseIndex = 0;
+                        });
+                      },
+                      itemBuilder: (context) {
+                        return SkillBiomechanicsProfile.getAllProfiles().map((p) {
+                          return PopupMenuItem<SkillBiomechanicsProfile>(
+                            value: p,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.fitness_center_rounded, color: AppColors.cyanGlow, size: 16),
+                                const SizedBox(width: 8),
+                                Text(
+                                  p.skillTitle,
+                                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList();
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.cyanGlow, width: 1.2),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.tune_rounded, color: AppColors.cyanGlow, size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              _currentBiomechanicsProfile.skillTitle.split(':').last.trim(),
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Learner Presence Detection Indicator & Lock Toggle
+                    InkWell(
+                      onTap: _toggleLearnerPresence,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: _isLearnerInFrame
+                              ? (_isCalibrating ? AppColors.primaryBlue.withValues(alpha: 0.3) : AppColors.emeraldGreen.withValues(alpha: 0.2))
+                              : AppColors.roseError.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _isLearnerInFrame
+                                ? (_isCalibrating ? AppColors.cyanGlow : AppColors.emeraldGreen)
+                                : AppColors.roseError,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _isLearnerInFrame
+                                  ? (_isCalibrating ? Icons.hourglass_top_rounded : Icons.person_pin_circle_rounded)
+                                  : Icons.person_off_rounded,
+                              color: _isLearnerInFrame
+                                  ? (_isCalibrating ? AppColors.cyanGlow : AppColors.emeraldGreen)
+                                  : AppColors.roseError,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _isLearnerInFrame
+                                  ? (_isCalibrating ? 'CALIBRATING...' : 'LEARNER LOCKED')
+                                  : 'NO LEARNER (SEARCHING)',
+                              style: TextStyle(
+                                color: _isLearnerInFrame
+                                    ? (_isCalibrating ? AppColors.cyanGlow : AppColors.emeraldGreen)
+                                    : AppColors.roseError,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                     // Switch camera front/back button
                     IconButton(
                       onPressed: _toggleCamera,
@@ -319,39 +551,25 @@ class _PracticePageState extends State<PracticePage> with SingleTickerProviderSt
             ),
           ),
 
-          // 4. Floating Voice/Vocal Cue Overlay Alert
+          // 4. Biomechanical Real-Time Diagnostic HUD Panel
           Positioned(
-            left: 20,
-            right: 20,
-            bottom: 160,
-            child: GlassContainer(
-              borderColor: _skeletonStateColor.withValues(alpha: 0.4),
-              backgroundColor: _skeletonStateColor.withValues(alpha: 0.1),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Icon(Icons.record_voice_over_rounded, color: _skeletonStateColor, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('HERCULES VOICE TELEMETRY', style: TextStyle(color: AppColors.textMuted, fontSize: 9, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 2),
-                        Text(
-                          _currentFeedback,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: _skeletonStateColor),
-                  ),
-                ],
-              ),
+            left: 10,
+            right: 10,
+            bottom: 110,
+            child: BiomechanicalHudPanel(
+              profile: _currentBiomechanicsProfile,
+              currentPhase: currentPhase,
+              evaluation: evalFrame,
+              onNextPhase: () {
+                setState(() {
+                  _currentPhaseIndex = (_currentPhaseIndex + 1) % _currentBiomechanicsProfile.phases.length;
+                });
+              },
+              onPrevPhase: () {
+                setState(() {
+                  _currentPhaseIndex = (_currentPhaseIndex - 1 + _currentBiomechanicsProfile.phases.length) % _currentBiomechanicsProfile.phases.length;
+                });
+              },
             ),
           ),
 
@@ -453,6 +671,8 @@ class PosePainter extends CustomPainter {
   final bool isGhostMode;
   final bool isReplayMode;
   final double pulseProgress;
+  final bool isLearnerInFrame;
+  final bool isCalibrating;
 
   PosePainter({
     required this.elbowAngle,
@@ -461,13 +681,79 @@ class PosePainter extends CustomPainter {
     required this.isGhostMode,
     required this.isReplayMode,
     required this.pulseProgress,
+    required this.isLearnerInFrame,
+    required this.isCalibrating,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    
-    // User joints coordinate coordinates map
+
+    // IF NO HUMAN IS IN FRAME: DO NOT DRAW STICK FIGURE ON DOORS OR WALLS!
+    if (!isLearnerInFrame) {
+      final scanRectPaint = Paint()
+        ..color = AppColors.cyanGlow.withValues(alpha: 0.35)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      final rWidth = size.width * 0.7;
+      final rHeight = size.height * 0.5;
+      final rLeft = (size.width - rWidth) / 2;
+      final rTop = (size.height - rHeight) / 2;
+      final cornerLen = 24.0;
+
+      // Draw Corner Reticles
+      canvas.drawLine(Offset(rLeft, rTop), Offset(rLeft + cornerLen, rTop), scanRectPaint);
+      canvas.drawLine(Offset(rLeft, rTop), Offset(rLeft, rTop + cornerLen), scanRectPaint);
+
+      canvas.drawLine(Offset(rLeft + rWidth, rTop), Offset(rLeft + rWidth - cornerLen, rTop), scanRectPaint);
+      canvas.drawLine(Offset(rLeft + rWidth, rTop), Offset(rLeft + rWidth, rTop + cornerLen), scanRectPaint);
+
+      canvas.drawLine(Offset(rLeft, rTop + rHeight), Offset(rLeft + cornerLen, rTop + rHeight), scanRectPaint);
+      canvas.drawLine(Offset(rLeft, rTop + rHeight), Offset(rLeft, rTop + rHeight - cornerLen), scanRectPaint);
+
+      canvas.drawLine(Offset(rLeft + rWidth, rTop + rHeight), Offset(rLeft + rWidth - cornerLen, rTop + rHeight), scanRectPaint);
+      canvas.drawLine(Offset(rLeft + rWidth, rTop + rHeight), Offset(rLeft + rWidth, rTop + rHeight - cornerLen), scanRectPaint);
+
+      // Pulsing Reticle Core
+      canvas.drawCircle(center, 35 + (pulseProgress * 15), Paint()..color = AppColors.cyanGlow.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 1.5);
+      canvas.drawCircle(center, 10, Paint()..color = AppColors.primaryBlue.withValues(alpha: 0.4)..style = PaintingStyle.fill);
+
+      final tp = TextPainter(textDirection: TextDirection.ltr, textAlign: TextAlign.center);
+      tp.text = const TextSpan(
+        text: '[ SEARCHING FOR LEARNER IN FRAME ]\nStep in front of camera to begin posture analysis',
+        style: TextStyle(color: AppColors.cyanGlow, fontWeight: FontWeight.bold, fontSize: 12, height: 1.5),
+      );
+      tp.layout(maxWidth: rWidth);
+      tp.paint(canvas, Offset(center.dx - (tp.width / 2), rTop + rHeight + 16));
+      return;
+    }
+
+    // IF LEARNER IS IN FRAME BUT CALIBRATING:
+    if (isCalibrating) {
+      final scanY = (size.height * 0.25) + (pulseProgress * (size.height * 0.45));
+      final laserPaint = Paint()
+        ..color = AppColors.cyanGlow
+        ..strokeWidth = 3.0;
+
+      final laserGlowPaint = Paint()
+        ..color = AppColors.cyanGlow.withValues(alpha: 0.15)
+        ..strokeWidth = 12.0;
+
+      canvas.drawLine(Offset(size.width * 0.15, scanY), Offset(size.width * 0.85, scanY), laserGlowPaint);
+      canvas.drawLine(Offset(size.width * 0.15, scanY), Offset(size.width * 0.85, scanY), laserPaint);
+
+      final tp = TextPainter(textDirection: TextDirection.ltr);
+      tp.text = TextSpan(
+        text: '⚡ CALIBRATING HUMAN BIOMECHANICS... STAY STILL',
+        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11, background: Paint()..color = AppColors.primaryBlue..style = PaintingStyle.fill),
+      );
+      tp.layout();
+      tp.paint(canvas, Offset(center.dx - (tp.width / 2), scanY - 24));
+      return;
+    }
+
+    // ONCE LEARNER IS CONFIRMED & CALIBRATED: DRAW SKELETON
     final head = Offset(center.dx, center.dy - 120);
     final shoulderL = Offset(center.dx - 60, center.dy - 70);
     final shoulderR = Offset(center.dx + 60, center.dy - 70);
@@ -486,7 +772,7 @@ class PosePainter extends CustomPainter {
     final footL = Offset(kneeL.dx - 20, kneeL.dy + 80);
     final footR = Offset(kneeR.dx + 20, kneeR.dy + 80);
 
-    // 1. Draw Professional Ghost Pose
+    // 1. Ghost Pose
     if (isGhostMode) {
       final ghostPaint = Paint()
         ..color = AppColors.primaryBlue.withValues(alpha: 0.25)
@@ -509,7 +795,7 @@ class PosePainter extends CustomPainter {
       canvas.drawLine(kneeR, footR, ghostPaint);
     }
 
-    // 2. Draw User Skeleton Lines
+    // 2. User Skeleton Lines
     final linePaint = Paint()
       ..color = skeletonColor
       ..strokeWidth = 5
@@ -530,7 +816,7 @@ class PosePainter extends CustomPainter {
     canvas.drawLine(hipR, kneeR, linePaint);
     canvas.drawLine(kneeR, footR, linePaint);
 
-    // 3. Draw Joint Nodes
+    // 3. Joint Nodes
     final nodePaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
@@ -554,7 +840,7 @@ class PosePainter extends CustomPainter {
     canvas.drawCircle(cog, 8, cogPaint);
     canvas.drawCircle(cog, 16 + (pulseProgress * 8), Paint()..color = AppColors.primaryBlue.withValues(alpha: 0.15)..style = PaintingStyle.stroke..strokeWidth = 2);
 
-    // 5. Draw Biomechanical Posture Scan Quality Tags (Good, Bad, Great) next to body parts
+    // 5. Posture Scan Quality Tags
     final tp = TextPainter(textDirection: TextDirection.ltr);
 
     void drawScanTag(String text, Color color, Offset offset) {
@@ -566,25 +852,20 @@ class PosePainter extends CustomPainter {
       tp.paint(canvas, offset);
     }
 
-    // Biomechanical scan indicators for joints
-    drawScanTag('Great [Head Sync]', AppColors.cyanGlow, Offset(head.dx + 12, head.dy - 6));
+    drawScanTag('Learner Lock [Head Sync]', AppColors.cyanGlow, Offset(head.dx + 12, head.dy - 6));
     drawScanTag('Good [Shoulders L/R]', AppColors.cyanGlow, Offset(shoulderL.dx - 45, shoulderL.dy - 18));
     
-    // Left elbow condition based on angle
     final elbowStatus = elbowAngle > 140 ? 'Great' : (elbowAngle > 120 ? 'Good' : 'Bad (Flex Elbow)');
     final elbowColor = elbowAngle > 140 ? AppColors.emeraldGreen : (elbowAngle > 120 ? AppColors.primaryBlue : AppColors.primaryPurple);
     drawScanTag('$elbowStatus [L-Elbow: ${elbowAngle.toInt()}°]', elbowColor, Offset(elbowL.dx - 60, elbowL.dy - 16));
 
-    // Core alignment
     final backStatus = backAngle > 170 ? 'Great' : 'Bad (Leaning)';
     final backColor = backAngle > 170 ? AppColors.emeraldGreen : AppColors.primaryPurple;
     drawScanTag('$backStatus [Spine: ${backAngle.toInt()}°]', backColor, Offset(cog.dx + 16, cog.dy - 6));
 
-    // Lower limbs
     drawScanTag('Great [Knees Balanced]', AppColors.emeraldGreen, Offset(kneeR.dx + 12, kneeR.dy - 6));
     drawScanTag('Good [Footing]', AppColors.cyanGlow, Offset(footL.dx - 12, footL.dy + 12));
 
-    // 6. Draw Heatmap (Only when Replay Heatmap is enabled)
     if (isReplayMode) {
       final heatmapPaint = Paint()
         ..shader = RadialGradient(
@@ -608,6 +889,8 @@ class PosePainter extends CustomPainter {
         oldDelegate.skeletonColor != skeletonColor ||
         oldDelegate.isGhostMode != isGhostMode ||
         oldDelegate.isReplayMode != isReplayMode ||
-        oldDelegate.pulseProgress != pulseProgress;
+        oldDelegate.pulseProgress != pulseProgress ||
+        oldDelegate.isLearnerInFrame != isLearnerInFrame ||
+        oldDelegate.isCalibrating != isCalibrating;
   }
 }

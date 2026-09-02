@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-class DigitalTwinRadarChart extends StatelessWidget {
+class DigitalTwinRadarChart extends StatefulWidget {
   final Map<String, double> metrics; // Scale 0.0 to 1.0
   final double size;
 
@@ -13,12 +13,48 @@ class DigitalTwinRadarChart extends StatelessWidget {
   });
 
   @override
+  State<DigitalTwinRadarChart> createState() => _DigitalTwinRadarChartState();
+}
+
+class _DigitalTwinRadarChartState extends State<DigitalTwinRadarChart> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1200),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: RadarChartPainter(metrics: metrics),
+      width: widget.size,
+      height: widget.size,
+      child: AnimatedBuilder(
+        animation: _animation,
+        builder: (context, child) {
+          final animatedMetrics = widget.metrics.map(
+            (key, val) => MapEntry(key, val * _animation.value),
+          );
+          return CustomPaint(
+            painter: RadarChartPainter(metrics: animatedMetrics),
+          );
+        },
       ),
     );
   }
@@ -32,7 +68,7 @@ class RadarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2.6;
+    final radius = math.min(size.width, size.height) / 3.0; // Shrink radius slightly to leave space for labels
     final keys = metrics.keys.toList();
     final count = keys.length;
 
@@ -42,16 +78,16 @@ class RadarChartPainter extends CustomPainter {
       ..strokeWidth = 1.0;
 
     final fillPaint = Paint()
-      ..color = AppColors.cyanGlow.withValues(alpha: 0.25)
+      ..color = AppColors.primaryBlue.withValues(alpha: 0.15) // Golden translucency
       ..style = PaintingStyle.fill;
 
     final linePaint = Paint()
-      ..color = AppColors.cyanGlow
+      ..color = AppColors.primaryBlue // Olympian Gold line
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
 
     final pointPaint = Paint()
-      ..color = AppColors.emeraldGreen
+      ..color = AppColors.cyanGlow // Pure Pentelic Marble dot
       ..style = PaintingStyle.fill;
 
     // Draw grid webs (levels 0.2, 0.4, 0.6, 0.8, 1.0)
@@ -106,6 +142,45 @@ class RadarChartPainter extends CustomPainter {
     // Draw vertex dots
     for (final p in points) {
       canvas.drawCircle(p, 4.5, pointPaint);
+      // Subtle glow behind the point
+      canvas.drawCircle(p, 8.0, Paint()..color = AppColors.cyanGlow.withValues(alpha: 0.15)..style = PaintingStyle.fill);
+    }
+
+    // Draw text labels
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    for (int i = 0; i < count; i++) {
+      final angle = (2 * math.pi / count) * i - (math.pi / 2);
+      final labelRadius = radius + 22.0; // Distance of text from center
+      final x = center.dx + labelRadius * math.cos(angle);
+      final y = center.dy + labelRadius * math.sin(angle);
+
+      // We wrap the labels to avoid text overlapping or clipping
+      String labelText = keys[i];
+      if (labelText.contains('&')) {
+        labelText = labelText.replaceAll(' & ', '\n& ');
+      }
+
+      textPainter.text = TextSpan(
+        text: labelText,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
+      );
+      textPainter.layout();
+
+      // Calculate offset so text is centered on the point (x, y)
+      final textOffset = Offset(
+        x - textPainter.width / 2,
+        y - textPainter.height / 2,
+      );
+      textPainter.paint(canvas, textOffset);
     }
   }
 

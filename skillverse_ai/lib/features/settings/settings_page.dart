@@ -84,19 +84,25 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  SwitchListTile(
-                    activeThumbColor: AppColors.cyanGlow,
-                    title: const Text('Auto-Sync Digital Twin', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Continuously recalculate skill vector from practice scores', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    value: _autoSyncTwin,
-                    onChanged: (val) => setState(() => _autoSyncTwin = val),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      activeThumbColor: AppColors.cyanGlow,
+                      title: const Text('Auto-Sync Digital Twin', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Continuously recalculate skill vector from practice scores', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      value: _autoSyncTwin,
+                      onChanged: (val) => setState(() => _autoSyncTwin = val),
+                    ),
                   ),
-                  ListTile(
-                    leading: const Icon(Icons.key_rounded, color: AppColors.cyanGlow),
-                    title: const Text('Manage Custom LLM API Keys', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Connect BYOK endpoints (OpenAI / Anthropic / Ollama)', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    trailing: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 14),
-                    onTap: _showApiKeyDialog,
+                  Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(Icons.key_rounded, color: AppColors.cyanGlow),
+                      title: const Text('Manage Custom LLM API Keys', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Connect BYOK endpoints (OpenAI / Anthropic / Ollama)', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      trailing: const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 14),
+                      onTap: _showApiKeyDialog,
+                    ),
                   ),
                 ],
               ),
@@ -111,19 +117,25 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.all(12),
               child: Column(
                 children: [
-                  SwitchListTile(
-                    activeThumbColor: AppColors.cyanGlow,
-                    title: const Text('Push Telemetry Alerts', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Daily streak reminders and AI Mentor recommendations', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    value: _pushNotifications,
-                    onChanged: (val) => setState(() => _pushNotifications = val),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      activeThumbColor: AppColors.cyanGlow,
+                      title: const Text('Push Telemetry Alerts', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Daily streak reminders and AI Mentor recommendations', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      value: _pushNotifications,
+                      onChanged: (val) => setState(() => _pushNotifications = val),
+                    ),
                   ),
-                  SwitchListTile(
-                    activeThumbColor: AppColors.cyanGlow,
-                    title: const Text('Spatial Haptic Feedback', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                    subtitle: const Text('Vibrate on quiz completion and ripple taps', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-                    value: _hapticFeedback,
-                    onChanged: (val) => setState(() => _hapticFeedback = val),
+                  Material(
+                    color: Colors.transparent,
+                    child: SwitchListTile(
+                      activeThumbColor: AppColors.cyanGlow,
+                      title: const Text('Spatial Haptic Feedback', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      subtitle: const Text('Vibrate on quiz completion and ripple taps', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                      value: _hapticFeedback,
+                      onChanged: (val) => setState(() => _hapticFeedback = val),
+                    ),
                   ),
                 ],
               ),
