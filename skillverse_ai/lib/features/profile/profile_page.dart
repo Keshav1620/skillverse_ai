@@ -8,6 +8,7 @@ import '../../core/widgets/glass_text_field.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/skill_badge.dart';
 import '../../core/widgets/section_header.dart';
+import '../models/user_model.dart';
 import '../providers/app_providers.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -114,9 +115,9 @@ class ProfilePage extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SkillBadge(label: 'LVL 42', color: AppColors.cyanGlow),
+                        SkillBadge(label: 'LVL ${user.level}', color: AppColors.cyanGlow),
                         const SizedBox(width: 8),
-                        SkillBadge(label: user.email, color: AppColors.primaryPurple),
+                        SkillBadge(label: '${user.rank.iconEmoji} ${user.rank.displayName}', color: Colors.amber),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -124,9 +125,11 @@ class ProfilePage extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _UserStatItem(label: 'Skills', value: '${user.totalSkillsMastered}'),
+                        _UserStatItem(label: 'Coins', value: '${user.coins}🪙'),
                         const ContainerDivider(),
-                        _UserStatItem(label: 'Streak', value: '${user.streakDays}d'),
+                        _UserStatItem(label: 'Diamonds', value: '${user.diamonds}💎'),
+                        const ContainerDivider(),
+                        _UserStatItem(label: 'Streak', value: '${user.streakDays}d 🔥'),
                         const ContainerDivider(),
                         _UserStatItem(label: 'Global Rank', value: 'Top 0.6%'),
                       ],
@@ -143,13 +146,18 @@ class ProfilePage extends ConsumerWidget {
                 child: Column(
                   children: [
                     _ProfileTile(
+                      icon: Icons.account_tree_rounded,
+                      title: 'Prometheus Skill Tree',
+                      onTap: () => context.push('/skill-tree'),
+                    ),
+                    _ProfileTile(
                       icon: Icons.edit_rounded,
                       title: 'Edit Profile Information',
                       onTap: () => _showEditProfileDialog(context, ref, user.name),
                     ),
                     _ProfileTile(
                       icon: Icons.workspace_premium_rounded,
-                      title: 'Achievements & Badges Showcase',
+                      title: 'Achievements & Quests Showcase',
                       onTap: () => context.push('/achievements'),
                     ),
                     _ProfileTile(
