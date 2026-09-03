@@ -71,6 +71,7 @@ class MainNavigationShell extends StatelessWidget {
 
     final secondaryItems = const [
       _NavItem(icon: Icons.bolt_rounded, activeIcon: Icons.bolt_rounded, label: 'Hercules Arena', route: '/practice'),
+      _NavItem(icon: Icons.account_tree_rounded, activeIcon: Icons.account_tree_rounded, label: 'Prometheus Skill Tree', route: '/skill-tree'),
       _NavItem(icon: Icons.query_stats_rounded, activeIcon: Icons.query_stats_rounded, label: 'Atlas Analytics', route: '/dashboard'),
       _NavItem(icon: Icons.groups_3_rounded, activeIcon: Icons.groups_3_rounded, label: 'Agora Forums', route: '/community'),
       _NavItem(icon: Icons.emoji_events_rounded, activeIcon: Icons.emoji_events_rounded, label: 'Olympus Standings', route: '/leaderboard'),

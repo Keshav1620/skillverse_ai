@@ -17,6 +17,7 @@ import '../../features/leaderboard/leaderboard_page.dart';
 import '../../features/achievements/achievements_page.dart';
 import '../../features/profile/profile_page.dart';
 import '../../features/settings/settings_page.dart';
+import '../../features/skill_tree/skill_tree_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,6 +44,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/achievements',
       builder: (context, state) => const AchievementsPage(),
+    ),
+    GoRoute(
+      path: '/skill-tree',
+      builder: (context, state) => const SkillTreePage(),
     ),
     GoRoute(
       path: '/settings',

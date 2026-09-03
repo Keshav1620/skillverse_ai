@@ -58,43 +58,92 @@ class UserNotifier extends StateNotifier<UserModel> {
           email: 'alex.vance@skillverse.ai',
           avatarUrl: 'https://i.pravatar.cc/300?img=11',
           title: 'Senior AI Systems Architect',
+          rank: TitleRank.master,
           level: 42,
           xp: 18450,
           nextLevelXp: 20000,
+          coins: 2450,
+          diamonds: 180,
           streakDays: 14,
           totalSkillsMastered: 18,
           globalRankPercentile: 99.4,
+          unlockedSkillNodes: ['node_1', 'node_2', 'node_3'],
+          claimedDailyDays: [1, 2, 3],
         ));
 
-  void updateName(String newName) {
-    state = UserModel(
-      id: state.id,
-      name: newName,
-      email: state.email,
-      avatarUrl: state.avatarUrl,
-      title: state.title,
-      level: state.level,
-      xp: state.xp,
-      nextLevelXp: state.nextLevelXp,
-      streakDays: state.streakDays,
-      totalSkillsMastered: state.totalSkillsMastered,
-      globalRankPercentile: state.globalRankPercentile,
+  void addXp(int amount) {
+    int newXp = state.xp + amount;
+    int newLevel = state.level;
+    int newNextLevelXp = state.nextLevelXp;
+
+    while (newXp >= newNextLevelXp) {
+      newLevel += 1;
+      newNextLevelXp += 5000;
+    }
+
+    final newRank = UserModel.calculateRank(newLevel);
+
+    state = state.copyWith(
+      xp: newXp,
+      level: newLevel,
+      nextLevelXp: newNextLevelXp,
+      rank: newRank,
     );
   }
 
+  void addCoins(int amount) {
+    state = state.copyWith(coins: state.coins + amount);
+  }
+
+  void addDiamonds(int amount) {
+    state = state.copyWith(diamonds: state.diamonds + amount);
+  }
+
+  bool unlockSkillNode(String nodeId, int coinCost, int diamondCost) {
+    if (state.coins >= coinCost && state.diamonds >= diamondCost) {
+      final updatedUnlocks = List<String>.from(state.unlockedSkillNodes)..add(nodeId);
+      state = state.copyWith(
+        coins: state.coins - coinCost,
+        diamonds: state.diamonds - diamondCost,
+        unlockedSkillNodes: updatedUnlocks,
+        totalSkillsMastered: state.totalSkillsMastered + 1,
+      );
+      addXp(450);
+      return true;
+    }
+    return false;
+  }
+
+  void claimDailyReward(int day, int coinsReward, int diamondsReward) {
+    if (!state.claimedDailyDays.contains(day)) {
+      final updatedClaimed = List<int>.from(state.claimedDailyDays)..add(day);
+      state = state.copyWith(
+        coins: state.coins + coinsReward,
+        diamonds: state.diamonds + diamondsReward,
+        claimedDailyDays: updatedClaimed,
+        streakDays: state.streakDays + 1,
+      );
+      addXp(250);
+    }
+  }
+
+  void spinLuckyWheel(int prizeCoins, int prizeDiamonds, int prizeXp) {
+    state = state.copyWith(
+      coins: state.coins + prizeCoins,
+      diamonds: state.diamonds + prizeDiamonds,
+      lastSpinTimestamp: DateTime.now(),
+    );
+    if (prizeXp > 0) addXp(prizeXp);
+  }
+
+  void updateName(String newName) {
+    state = state.copyWith(name: newName);
+  }
+
   void updateFromOnboarding(Map<String, dynamic> data) {
-    state = UserModel(
-      id: state.id,
+    state = state.copyWith(
       name: data['name'] ?? state.name,
-      email: state.email,
-      avatarUrl: state.avatarUrl,
       title: data['learningGoal'] ?? state.title,
-      level: state.level,
-      xp: state.xp,
-      nextLevelXp: state.nextLevelXp,
-      streakDays: state.streakDays,
-      totalSkillsMastered: state.totalSkillsMastered,
-      globalRankPercentile: state.globalRankPercentile,
     );
   }
 }

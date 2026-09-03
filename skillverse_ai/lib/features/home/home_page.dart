@@ -7,7 +7,10 @@ import '../../core/widgets/glass_container.dart';
 import '../../core/widgets/section_header.dart';
 import '../../core/widgets/stat_card.dart';
 import '../../core/widgets/skill_badge.dart';
+import '../models/user_model.dart';
 import '../providers/app_providers.dart';
+import '../gamification/widgets/daily_rewards_dialog.dart';
+import '../gamification/widgets/lucky_spin_dialog.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -67,17 +70,20 @@ class HomePage extends ConsumerWidget {
                                 user.name,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const SizedBox(width: 4),
-                              const Icon(Icons.verified_rounded, color: AppColors.cyanGlow, size: 16),
+                              Text(
+                                user.rank.iconEmoji,
+                                style: const TextStyle(fontSize: 14),
+                              ),
                             ],
                           ),
                           Text(
-                            user.title,
-                            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                            '${user.rank.displayName} • Lvl ${user.level}',
+                            style: const TextStyle(color: AppColors.cyanGlow, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -85,7 +91,7 @@ class HomePage extends ConsumerWidget {
                   ),
                   Row(
                     children: [
-                      // Streak Flame Badge
+                      // Coins Pill
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -93,28 +99,104 @@ class HomePage extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.local_fire_department_rounded, color: Colors.amber, size: 16),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${user.streakDays}d',
-                              style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 12),
-                            ),
-                          ],
+                        child: Text(
+                          '${user.coins} 🪙',
+                          style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 11),
                         ),
                       ),
                       const SizedBox(width: 4),
-                      IconButton(
-                        onPressed: () => context.push('/settings'),
-                        icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+                      // Diamonds Pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.cyanGlow.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.cyanGlow.withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          '${user.diamonds} 💎',
+                          style: const TextStyle(color: AppColors.cyanGlow, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
                       ),
                     ],
                   ),
                 ],
               ).animate().fadeIn(duration: 400.ms),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Gamification Quick Action Strip (Daily Rewards, Lucky Spin, Skill Tree)
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(context: context, builder: (_) => const DailyRewardsDialog());
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: GlassContainer(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        borderColor: Colors.amber.withValues(alpha: 0.5),
+                        backgroundColor: Colors.amber.withValues(alpha: 0.1),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.local_fire_department_rounded, color: Colors.orangeAccent, size: 18),
+                            SizedBox(width: 4),
+                            Text('Daily 🎁', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(context: context, builder: (_) => const LuckySpinDialog());
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: GlassContainer(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        borderColor: AppColors.cyanGlow.withValues(alpha: 0.5),
+                        backgroundColor: AppColors.cyanGlow.withValues(alpha: 0.1),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.stars_rounded, color: AppColors.cyanGlow, size: 18),
+                            SizedBox(width: 4),
+                            Text('Wheel 🎡', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        context.push('/skill-tree');
+                      },
+                      borderRadius: BorderRadius.circular(14),
+                      child: GlassContainer(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        borderColor: AppColors.emeraldGreen.withValues(alpha: 0.5),
+                        backgroundColor: AppColors.emeraldGreen.withValues(alpha: 0.1),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.account_tree_rounded, color: AppColors.emeraldGreen, size: 18),
+                            SizedBox(width: 4),
+                            Text('Skill Tree 🌳', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
 
               // Hero Live Camera Feed Action Card
               GlassContainer(
