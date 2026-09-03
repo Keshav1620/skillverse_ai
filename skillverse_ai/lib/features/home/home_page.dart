@@ -135,21 +135,23 @@ class HomePage extends ConsumerWidget {
                       },
                       borderRadius: BorderRadius.circular(14),
                       child: GlassContainer(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         borderColor: Colors.amber.withValues(alpha: 0.5),
                         backgroundColor: Colors.amber.withValues(alpha: 0.1),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.local_fire_department_rounded, color: Colors.orangeAccent, size: 18),
-                            SizedBox(width: 4),
-                            Text('Daily 🎁', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                            Icon(Icons.local_fire_department_rounded, color: Colors.orangeAccent, size: 16),
+                            SizedBox(width: 3),
+                            Flexible(
+                              child: Text('Daily 🎁', overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: InkWell(
                       onTap: () {
@@ -157,21 +159,23 @@ class HomePage extends ConsumerWidget {
                       },
                       borderRadius: BorderRadius.circular(14),
                       child: GlassContainer(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         borderColor: AppColors.cyanGlow.withValues(alpha: 0.5),
                         backgroundColor: AppColors.cyanGlow.withValues(alpha: 0.1),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.stars_rounded, color: AppColors.cyanGlow, size: 18),
-                            SizedBox(width: 4),
-                            Text('Wheel 🎡', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                            Icon(Icons.stars_rounded, color: AppColors.cyanGlow, size: 16),
+                            SizedBox(width: 3),
+                            Flexible(
+                              child: Text('Wheel 🎡', overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                            ),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: InkWell(
                       onTap: () {
@@ -179,15 +183,17 @@ class HomePage extends ConsumerWidget {
                       },
                       borderRadius: BorderRadius.circular(14),
                       child: GlassContainer(
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                         borderColor: AppColors.emeraldGreen.withValues(alpha: 0.5),
                         backgroundColor: AppColors.emeraldGreen.withValues(alpha: 0.1),
                         child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.account_tree_rounded, color: AppColors.emeraldGreen, size: 18),
-                            SizedBox(width: 4),
-                            Text('Skill Tree 🌳', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                            Icon(Icons.account_tree_rounded, color: AppColors.emeraldGreen, size: 16),
+                            SizedBox(width: 3),
+                            Flexible(
+                              child: Text('Tree 🌳', overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                            ),
                           ],
                         ),
                       ),
