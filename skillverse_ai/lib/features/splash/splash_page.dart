@@ -11,11 +11,14 @@ class SplashPage extends StatefulWidget {
 }
 
 class _SplashPageState extends State<SplashPage> {
+  bool _hasNavigated = false;
+
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 2800), () {
-      if (mounted) {
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted && !_hasNavigated) {
+        _hasNavigated = true;
         context.go('/onboarding');
       }
     });
